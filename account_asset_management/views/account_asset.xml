@@ -70,21 +70,9 @@
                         />
                         <field name="move_line_check" invisible="1" />
                         <newline />
-                        <field
-                            name="depreciation_base"
-                            widget="monetary"
-                            options="{'currency_field': 'company_currency_id'}"
-                        />
-                        <field
-                            name="value_depreciated"
-                            widget="monetary"
-                            options="{'currency_field': 'company_currency_id'}"
-                        />
-                        <field
-                            name="value_residual"
-                            widget="monetary"
-                            options="{'currency_field': 'company_currency_id'}"
-                        />
+                        <field name="depreciation_base" />
+                        <field name="value_depreciated" />
+                        <field name="value_residual" />
                         <field name="active" invisible="1" />
                     </group>
                     <notebook colspan="4">
@@ -93,8 +81,6 @@
                                 <group>
                                     <field
                                         name="purchase_value"
-                                        widget="monetary"
-                                        options="{'currency_field': 'currency_id'}"
                                         attrs="{'readonly':['|', ('move_line_check', '=', True), ('state', '!=', 'draft')]}"
                                     />
                                     <field
@@ -105,8 +91,6 @@
                                 <group>
                                     <field
                                         name="salvage_value"
-                                        widget="monetary"
-                                        options="{'currency_field': 'company_currency_id'}"
                                         attrs="{'readonly': [('state', '!=', 'draft')]}"
                                     />
                                     <field name="date_remove" />
@@ -174,7 +158,6 @@
                                 options="{'reload_on_button': true}"
                             >
                                 <tree
-                                    string="Asset Lines"
                                     decoration-info="(move_check == False) and (init_entry == False)"
                                     create="false"
                                 >
@@ -187,6 +170,7 @@
                                     <field name="init_entry" string="Init" />
                                     <field name="move_check" />
                                     <field name="parent_state" invisible="1" />
+                                    <field name="company_currency_id" invisible="1" />
                                     <button
                                         name="create_move"
                                         icon="fa-cog"
@@ -217,6 +201,10 @@
                                             <field name="parent_state" invisible="1" />
                                             <field
                                                 name="depreciation_base"
+                                                invisible="1"
+                                            />
+                                            <field
+                                                name="company_currency_id"
                                                 invisible="1"
                                             />
                                             <field name="type" />
@@ -252,7 +240,7 @@
                         </page>
                         <page string="History">
                             <field name="account_move_line_ids" readonly="1">
-                                <tree string="Journal Items">
+                                <tree>
                                     <field name="date" />
                                     <field name="move_id" />
                                     <field name="journal_id" optional="show" />
@@ -290,7 +278,7 @@
         <field name="name">account.asset.tree</field>
         <field name="model">account.asset</field>
         <field name="arch" type="xml">
-            <tree string="Assets">
+            <tree>
                 <field name="name" />
                 <field name="code" optional="show" />
                 <field name="depreciation_base" optional="show" />
@@ -316,6 +304,7 @@
                     decoration-info="state == 'draft'"
                     decoration-muted="state == 'close'"
                 />
+                <field name="company_currency_id" invisible="1" />
             </tree>
         </field>
     </record>

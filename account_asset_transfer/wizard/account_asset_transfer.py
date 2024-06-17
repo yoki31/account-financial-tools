@@ -142,17 +142,33 @@ class AccountAssetTransfer(models.TransientModel):
             "domain": [("id", "=", move.id)],
         }
 
-    def _get_move_line_from_asset(self, move_line):
-        return {
-            "name": move_line.name,
-            "account_id": move_line.account_id.id,
-            "analytic_account_id": move_line.analytic_account_id.id,
-            "analytic_tag_ids": [(4, tag.id) for tag in move_line.analytic_tag_ids],
-            "debit": move_line.credit,
-            "credit": move_line.debit,
-            "partner_id": move_line.partner_id.id,
-            "asset_id": move_line.asset_id.id,  # Link to existing asset
-        }
+    def _get_move_line_from_asset(self, asset):
+        # Case asset created with account move
+        if asset.account_move_line_ids:
+            asset.account_move_line_ids.ensure_one()
+            move_line = asset.account_move_line_ids[0]
+            return {
+                "name": move_line.name,
+                "account_id": move_line.account_id.id,
+                "analytic_account_id": move_line.analytic_account_id.id or False,
+                "analytic_tag_ids": [(4, tag.id) for tag in move_line.analytic_tag_ids],
+                "debit": move_line.credit,
+                "credit": move_line.debit,
+                "partner_id": move_line.partner_id.id,
+                "asset_id": move_line.asset_id.id,  # Link to existing asset
+            }
+        # Case asset created without account moves
+        else:
+            return {
+                "name": asset.name,
+                "account_id": asset.profile_id.account_asset_id.id,
+                "analytic_account_id": asset.account_analytic_id.id,
+                "analytic_tag_ids": [(4, tag.id) for tag in asset.analytic_tag_ids],
+                "debit": 0.0,
+                "credit": asset.purchase_value or 0.0,
+                "partner_id": asset.partner_id.id,
+                "asset_id": asset.id,  # Link to existing asset
+            }
 
     def _get_move_line_to_asset(self, to_asset):
         return {
@@ -170,17 +186,26 @@ class AccountAssetTransfer(models.TransientModel):
     def _get_transfer_data(self):
         move_lines = []
         # Create lines from assets
-        for asset in self.from_asset_ids:
-            asset.account_move_line_ids.ensure_one()
-            move_line = asset.account_move_line_ids[0]
-            move_line_vals = self._get_move_line_from_asset(move_line)
-            move_lines.append((0, 0, move_line_vals))
+        move_lines += [
+            (0, 0, self._get_move_line_from_asset(from_asset))
+            for from_asset in self.from_asset_ids
+        ]
         # Create lines for new assets
         move_lines += [
             (0, 0, self._get_move_line_to_asset(to_asset))
             for to_asset in self.to_asset_ids
         ]
         return move_lines
+
+    def expand_to_asset_ids(self):
+        self.ensure_one()
+        lines = self.to_asset_ids.filtered(lambda l: l.asset_profile_id and l.quantity)
+        for line in lines:
+            line._expand_asset_line()
+        action = self.env.ref("account_asset_transfer.action_account_asset_transfer")
+        result = action.sudo().read()[0]
+        result.update({"res_id": self.id})
+        return result
 
 
 class AccountAssetTransferLine(models.TransientModel):
@@ -197,10 +222,22 @@ class AccountAssetTransferLine(models.TransientModel):
         required=True,
     )
     asset_name = fields.Char(required=True)
-    asset_value = fields.Float(
-        string="Asset Value",
+    quantity = fields.Float(
+        string="Quantity",
         required=True,
         default=0.0,
+    )
+    price_unit = fields.Float(
+        string="Unit Price",
+        required=True,
+        default=0.0,
+    )
+    asset_value = fields.Float(
+        string="Asset Value",
+        compute="_compute_asset_value",
+        default=0.0,
+        store=True,
+        required=True,
     )
     partner_id = fields.Many2one(
         comodel_name="res.partner",
@@ -214,3 +251,19 @@ class AccountAssetTransferLine(models.TransientModel):
         comodel_name="account.analytic.tag",
         string="Analytic tags",
     )
+
+    @api.depends("quantity", "price_unit")
+    def _compute_asset_value(self):
+        for rec in self:
+            rec.asset_value = rec.quantity * rec.price_unit
+
+    def _expand_asset_line(self):
+        self.ensure_one()
+        profile = self.asset_profile_id
+        if profile and self.quantity > 1.0 and profile.asset_product_item:
+            line = self
+            qty = self.quantity
+            name = self.asset_name
+            self.update({"quantity": 1, "asset_name": "{} {}".format(name, 1)})
+            for i in range(1, int(qty)):
+                line.copy({"asset_name": "{} {}".format(name, i + 1)})

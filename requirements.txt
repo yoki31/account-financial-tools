@@ -1,5 +1,3 @@
 # generated from manifests external_dependencies
-numpy
 numpy-financial<=1.0.0
-python-dateutil
-vatnumber
+numpy>=1.15

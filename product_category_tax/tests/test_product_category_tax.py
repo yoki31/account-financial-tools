@@ -41,7 +41,7 @@ class ProductCategoryTax(common.SavepointCase):
         )
 
     def test_01_copy_taxes(self):
-        """ Default taxes taken from the category"""
+        """Default taxes taken from the category"""
         test_categ = self.categ_obj.create(
             {
                 "name": "Super Category",
@@ -52,11 +52,11 @@ class ProductCategoryTax(common.SavepointCase):
         self.product_test = self.product_obj.create(
             {"name": "TEST 01", "categ_id": test_categ.id, "list_price": 155.0}
         )
-        self.product_test.product_tmpl_id.onchange_categ_id()
-        self.assertEqual(self.product_test.supplier_taxes_id, self.tax_purchase)
+        self.product_test.product_tmpl_id._onchange_categ_id_set_taxes()
+        self.assertEquals(self.product_test.supplier_taxes_id, self.tax_purchase)
 
     def test_02_update_taxes(self):
-        """ Default update """
+        """Default update"""
         self.product_test = self.product_obj.create(
             {
                 "name": "TEST 02",
@@ -78,7 +78,7 @@ class ProductCategoryTax(common.SavepointCase):
         self.assertEqual(self.product_test.supplier_taxes_id, self.tax_purchase)
 
     def test_03_taxes_not_updeatable(self):
-        """ Avoid update specific products"""
+        """Avoid update specific products"""
         self.product_test3 = self.product_obj.create(
             {
                 "name": "TEST 03",
@@ -106,5 +106,59 @@ class ProductCategoryTax(common.SavepointCase):
         self.product_test3.categ_id = test_categ.id
         self.product_test4.categ_id = test_categ.id
         test_categ.update_product_taxes()
-        self.assertEqual(self.product_test3.supplier_taxes_id, self.tax_purchase)
-        self.assertNotEqual(self.product_test4.supplier_taxes_id, self.tax_purchase)
+        self.assertEquals(self.product_test3.supplier_taxes_id, self.tax_purchase)
+        self.assertNotEquals(self.product_test4.supplier_taxes_id, self.tax_purchase)
+
+    def test_04_copy_taxes_during_create_product_product(self):
+        """Default taxes taken from the category during product create"""
+        category = self.env["product.category"].create(
+            {
+                "name": "Super Category",
+                "taxes_id": [(6, 0, self.tax_sale.ids)],
+                "supplier_taxes_id": [(6, 0, self.tax_purchase.ids)],
+            }
+        )
+        # Case 1: Creating product.product with category
+        product = self.env["product.product"].create(
+            {"name": "Test Product", "categ_id": category.id}
+        )
+        self.assertEqual(product.taxes_id, category.taxes_id)
+        self.assertEqual(product.supplier_taxes_id, category.supplier_taxes_id)
+        # Case 2: Creating product.product with category and values
+        product = self.env["product.product"].create(
+            {
+                "name": "Test Product",
+                "categ_id": category.id,
+                "taxes_id": False,
+                "supplier_taxes_id": [(6, 0, self.tax_purchase2.ids)],
+            }
+        )
+        self.assertFalse(product.taxes_id, False)
+        self.assertEqual(product.supplier_taxes_id, self.tax_purchase2)
+
+    def test_04_copy_taxes_during_create_product_template(self):
+        """Default taxes taken from the category during product create"""
+        category = self.env["product.category"].create(
+            {
+                "name": "Super Category",
+                "taxes_id": [(6, 0, self.tax_sale.ids)],
+                "supplier_taxes_id": [(6, 0, self.tax_purchase.ids)],
+            }
+        )
+        # Case 1: Creating product.product with category
+        product = self.env["product.template"].create(
+            {"name": "Test Product", "categ_id": category.id}
+        )
+        self.assertEqual(product.taxes_id, category.taxes_id)
+        self.assertEqual(product.supplier_taxes_id, category.supplier_taxes_id)
+        # Case 2: Creating product.product with category and values
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Product",
+                "categ_id": category.id,
+                "taxes_id": False,
+                "supplier_taxes_id": [(6, 0, self.tax_purchase2.ids)],
+            }
+        )
+        self.assertFalse(product.taxes_id, False)
+        self.assertEqual(product.supplier_taxes_id, self.tax_purchase2)

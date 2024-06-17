@@ -25,6 +25,15 @@ class AccountLoanLine(models.Model):
         readonly=True,
         ondelete="cascade",
     )
+    company_id = fields.Many2one(
+        "res.company",
+        readonly=True,
+        related="loan_id.company_id",
+        store=True,
+    )
+    partner_id = fields.Many2one(
+        "res.partner", readonly=True, related="loan_id.partner_id"
+    )
     is_leasing = fields.Boolean(
         related="loan_id.is_leasing",
         readonly=True,
@@ -48,6 +57,21 @@ class AccountLoanLine(models.Model):
         "account.account",
         readonly=True,
         related="loan_id.long_term_loan_account_id",
+    )
+    journal_id = fields.Many2one(
+        "account.journal",
+        readonly=True,
+        related="loan_id.journal_id",
+    )
+    short_term_loan_account_id = fields.Many2one(
+        "account.account",
+        readonly=True,
+        related="loan_id.short_term_loan_account_id",
+    )
+    interest_expenses_account_id = fields.Many2one(
+        "account.account",
+        readonly=True,
+        related="loan_id.interest_expenses_account_id",
     )
     currency_id = fields.Many2one(
         "res.currency",
@@ -412,8 +436,9 @@ class AccountLoanLine(models.Model):
 
     def view_account_moves(self):
         self.ensure_one()
-        action = self.env.ref("account.action_move_line_form")
-        result = action.read()[0]
+        result = self.env["ir.actions.act_window"]._for_xml_id(
+            "account.action_move_line_form"
+        )
         result["context"] = {
             "default_loan_line_id": self.id,
             "default_loan_id": self.loan_id.id,
@@ -427,8 +452,9 @@ class AccountLoanLine(models.Model):
 
     def view_account_invoices(self):
         self.ensure_one()
-        action = self.env.ref("account.action_move_out_invoice_type")
-        result = action.read()[0]
+        result = self.env["ir.actions.act_window"]._for_xml_id(
+            "account.action_move_out_invoice_type"
+        )
         result["context"] = {
             "default_loan_line_id": self.id,
             "default_loan_id": self.loan_id.id,

@@ -33,13 +33,12 @@ class AccountMove(models.Model):
     asset_count = fields.Integer(compute="_compute_asset_count")
 
     def _compute_asset_count(self):
-        for rec in self:
-            assets = (
-                self.env["account.asset.line"]
-                .search([("move_id", "=", rec.id)])
-                .mapped("asset_id")
-            )
-            rec.asset_count = len(assets)
+        rg_res = self.env["account.asset.line"].read_group(
+            [("move_id", "in", self.ids)], ["move_id"], ["move_id"]
+        )
+        mapped_data = {x["move_id"][0]: x["move_id_count"] for x in rg_res}
+        for move in self:
+            move.asset_count = mapped_data.get(move.id, 0)
 
     def unlink(self):
         # for move in self:
@@ -60,8 +59,10 @@ class AccountMove(models.Model):
 
     def write(self, vals):
         if set(vals).intersection(FIELDS_AFFECTS_ASSET_MOVE):
-            deprs = self.env["account.asset.line"].search(
-                [("move_id", "in", self.ids), ("type", "=", "depreciate")]
+            deprs = (
+                self.env["account.asset.line"]
+                .sudo()
+                .search([("move_id", "in", self.ids), ("type", "=", "depreciate")])
             )
             if deprs:
                 raise UserError(
@@ -87,7 +88,9 @@ class AccountMove(models.Model):
     def action_post(self):
         super().action_post()
         for move in self:
-            for aml in move.line_ids.filtered("asset_profile_id"):
+            for aml in move.line_ids.filtered(
+                lambda line: line.asset_profile_id and not line.tax_line_id
+            ):
                 vals = move._prepare_asset_vals(aml)
                 if not aml.name:
                     raise UserError(
@@ -129,7 +132,7 @@ class AccountMove(models.Model):
         if move_vals["move_type"] not in ("out_invoice", "out_refund"):
             for line_command in move_vals.get("line_ids", []):
                 line_vals = line_command[2]  # (0, 0, {...})
-                asset = self.env["account.asset"].browse(line_vals["asset_id"])
+                asset = self.env["account.asset"].browse(line_vals.get("asset_id"))
                 # We remove the asset if we recognize that we are reversing
                 # the asset creation
                 if asset:
@@ -176,6 +179,7 @@ class AccountMoveLine(models.Model):
         comodel_name="account.asset",
         string="Asset",
         ondelete="restrict",
+        check_company=True,
     )
 
     @api.depends("account_id", "asset_id")

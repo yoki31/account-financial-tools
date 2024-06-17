@@ -360,7 +360,6 @@ msgstr ""
 
 #. module: account_cash_deposit
 #: model:ir.model.fields,help:account_cash_deposit.field_account_cash_deposit__message_has_error
-#: model:ir.model.fields,help:account_cash_deposit.field_account_cash_deposit__message_has_sms_error
 msgid "If checked, some messages have a delivery error."
 msgstr ""
 
@@ -369,6 +368,13 @@ msgstr ""
 msgid ""
 "If set, a line for this cash unit will be created by default on a new cash "
 "deposit or a new cash order or both."
+msgstr ""
+
+#. module: account_cash_deposit
+#: model:ir.model.fields,help:account_cash_deposit.field_account_cash_deposit__coin_amount
+msgid ""
+"If your bank has a coin counting machine, enter the total amount of coins "
+"counted by the machine instead of creating a line for each type of coin."
 msgstr ""
 
 #. module: account_cash_deposit
@@ -409,6 +415,11 @@ msgstr ""
 #. module: account_cash_deposit
 #: model:ir.model.fields,field_description:account_cash_deposit.field_account_cash_deposit__line_ids
 msgid "Lines"
+msgstr ""
+
+#. module: account_cash_deposit
+#: model:ir.model.fields,field_description:account_cash_deposit.field_account_cash_deposit__coin_amount
+msgid "Loose Coin Amount"
 msgstr ""
 
 #. module: account_cash_deposit
@@ -537,11 +548,6 @@ msgid "Responsible User"
 msgstr ""
 
 #. module: account_cash_deposit
-#: model:ir.model.fields,field_description:account_cash_deposit.field_account_cash_deposit__message_has_sms_error
-msgid "SMS Delivery error"
-msgstr ""
-
-#. module: account_cash_deposit
 #: model:ir.model.fields,field_description:account_cash_deposit.field_account_cash_deposit__state
 msgid "Status"
 msgstr ""
@@ -579,19 +585,24 @@ msgid "The coin quantity must be positive."
 msgstr ""
 
 #. module: account_cash_deposit
+#: model:ir.model.constraint,message:account_cash_deposit.constraint_account_cash_deposit_coin_amount_positive
+msgid "The loose coin amount must be positive or null."
+msgstr ""
+
+#. module: account_cash_deposit
 #: model:ir.model.constraint,message:account_cash_deposit.constraint_account_cash_deposit_line_qty_positive
 msgid "The quantity must be positive or null."
 msgstr ""
 
 #. module: account_cash_deposit
-#: model:ir.model.constraint,message:account_cash_deposit.constraint_cash_unit_value_positive
-msgid "The value must be strictly positive."
+#: code:addons/account_cash_deposit/models/account_cash_deposit.py:0
+#, python-format
+msgid "The total amount of %s is zero."
 msgstr ""
 
 #. module: account_cash_deposit
-#: code:addons/account_cash_deposit/models/account_cash_deposit.py:0
-#, python-format
-msgid "There are no non-zero lines on %s!"
+#: model:ir.model.constraint,message:account_cash_deposit.constraint_cash_unit_value_positive
+msgid "The value must be strictly positive."
 msgstr ""
 
 #. module: account_cash_deposit
